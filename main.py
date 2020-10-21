@@ -124,7 +124,6 @@ def draw_grid(surface, color, circle_color, cross_color, grid):
                     # Draw cross
                     r = 2
                     x, y, p = s*j, s*i, s*20//100
-                    print(x, y, p)
                     draw.polygon(surface, cross_color, [(x+p+r, y+p-r), (x+p-r, y+p+r), (x+s-p-r, y+s-p+r), (x+s-p+r, y+s-p-r)])
                     draw.polygon(surface, cross_color, [(x+s-p-r, y+p-r), (x+p-r, y+s-p-r), (x+p+r, y+s-p+r), (x+s-p+r, y+p+r)])
 

@@ -27,6 +27,7 @@ win_y = screen_height // 2 - SIZE // 2
 os.environ["SDL_VIDEO_WINDOW_POS"] = str(win_x) + ',' + str(win_y)
 win = display.set_mode((SIZE, SIZE)) # main window
 display.set_caption("Tic-tac-toe")
+display.set_icon(image.load("icon.png"))
 
 GRID_SIZE = 300
 
@@ -50,7 +51,7 @@ END = font.SysFont('calibri', 40)
 grid = [['E' for _ in range(3)] for _ in range(3)] # Matrix containing the squares and what is inside (either a cross X or a circle O)
 player = True
 turns = 0
-mode = 'easy'
+mode = 'medium'
 
 def bot(grid, mode):
     """Choose the best place for the bot to play"""
@@ -118,43 +119,70 @@ def draw_grid(surface, color, circle_color, cross_color, grid):
             for j in range(len(grid[i])):
                 if grid[i][j] == 'O':
                     # Draw circle
-                    draw.circle(surface, circle_color, (s//2+j*100, s//2+i*100), int(s*.3), 6)
+                    draw.circle(surface, circle_color, (s//2+j*100, s//2+i*100), s*30//100, 6)
                 elif grid[i][j] == 'X':
                     # Draw cross
                     r = 2
-                    x, y, p = s*j, s*i, int(s*.2)
+                    x, y, p = s*j, s*i, s*20//100
+                    print(x, y, p)
                     draw.polygon(surface, cross_color, [(x+p+r, y+p-r), (x+p-r, y+p+r), (x+s-p-r, y+s-p+r), (x+s-p+r, y+s-p-r)])
                     draw.polygon(surface, cross_color, [(x+s-p-r, y+p-r), (x+p-r, y+s-p-r), (x+p+r, y+s-p+r), (x+s-p+r, y+p+r)])
 
-def draw_mode_buttons(surface, color):
+def draw_mode_buttons(surface, background,  color, mode):
+    """Draw the buttons changing the game mode"""
     w = 100
     h = w * 40 // 100
     l1 = SIZE//2 - w - w*20//100
     l2 =  SIZE//2 + w*20//100
     t = (SIZE - GRID_SIZE)//4 - h//2
-    draw.line(surface, color, (l1, t + h), (l1 + w, t + h))
+
+    if mode == 'easy':
+        draw.line(surface, color, (l1, t + h), (l1 + w, t + h))
+        draw.line(surface, background, (l2, t + h), (l2 + w, t + h))
+    elif mode == 'medium':
+        draw.line(surface, background, (l1, t + h), (l1 + w, t + h))
+        draw.line(surface, color, (l2, t + h), (l2 + w, t + h))
+
     text = MODES.render('EASY', 1, color)
     surface.blit(text, (l1 + w//2 - text.get_width()//2, t + h//2 - text.get_height()//2))
     text = MODES.render('MEDIUM', 1, color)
     surface.blit(text, (l2 + w//2 - text.get_width()//2, t + h//2 - text.get_height()//2))
+
+def draw_won_line(surface, won, circle_color, cross_color):
+    """Draw a line on the three wining squares"""
+    if not won: won = ([], 1, 'draw')
+    winner, n, t = won
+    color = circle_color
+    if winner == 'X': color = cross_color
+    s = surface.get_width()
+
+    if t == 'row':
+        draw.line(surface, color, (0, s//6 + s//3*n), (s, s//6 + s//3*n), 6)
+    elif t == 'col':
+        draw.line(surface, color, (s//6 + s//3*n, 0), (s//6 + s//3*n, s), 6)
+    elif t == 'dlr':
+        draw.polygon(surface, color, [(4, 0), (0, 4), (s-4, s), (s, s-4)])
+    elif t == 'drl':
+        draw.polygon(surface, color, [(s-4, 0), (s, 4), (4, s), (0, s-4)])
+
 
 def won(grid):
     """Check if three same tokens are aligned"""
     for i in range(len(grid)):
         ri = list(set(grid[i])) #rows
         if len(ri) == 1 and ri[0] != 'E':
-            return True
+            return (ri[0], i, 'row')
         rj = list(set([grid[j][i] for j in range(len(grid[i]))])) #cols
         if len(rj) == 1 and rj[0] != 'E':
-            return True
+            return (rj[0], i, 'col')
 
     diag_lr = list(set([grid[i][i] for i in range(len(grid))])) # diagonal from top left to bottom right
     if len(diag_lr) == 1 and diag_lr[0] != 'E':
-            return True
+            return (diag_lr[0], 1, 'dlr')
             
     diag_rl = list(set([grid[i][len(grid) - i - 1] for i in range(len(grid))])) # diagonal from top right to bottom left
     if len(diag_rl) == 1 and diag_rl[0] != 'E':
-            return True
+            return (diag_rl[0], 1,  'drl')
 
     return False
 
@@ -173,7 +201,7 @@ t1 = SIZE//2 - h - h//4
 t2 = SIZE//2 + h//4
 
 win.fill(BACKGROUND)
-draw_mode_buttons(win, WHITE)
+draw_mode_buttons(win, BACKGROUND, WHITE, mode)
 
 while run:
     clock.tick(FPS)
@@ -204,7 +232,7 @@ while run:
                             mode = 'easy'
                         elif x >= 260 and x <= 360:
                             mode = 'medium'
-                        print(mode)
+                        draw_mode_buttons(win, BACKGROUND, WHITE, mode)
         else:
             bot(grid, mode)
             player = True
@@ -223,6 +251,10 @@ while run:
 
 
     if end:
+        sleep(.5)
+        draw_won_line(grid_surface, won(grid), CIRCLE, CROSS)
+        win.blit(grid_surface, (GRID_X, GRID_Y))
+        display.update()
         sleep(1)
         draw.rect(win, BACKGROUND, (l, t1, w, h))
         draw.rect(win, BACKGROUND, (l, t2, w, h))
@@ -246,6 +278,7 @@ while run:
             if x >= l and x <= l + w:
                 if y >= t1 and y <= t1 + h:
                     win.fill(BACKGROUND)
+                    draw_mode_buttons(win, BACKGROUND, WHITE, mode)
                     grid_surface.fill((0, 0, 0, 0))
                     grid = [['E' for _ in range(3)] for _ in range(3)]
                     player = True
